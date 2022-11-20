@@ -1,5 +1,5 @@
 {
-  "name": "to-do-api",
+  "name": "task-to-do-api",
   "version": "1.0.0",
   "description": "a rest api build for to-do app",
   "main": "index.js",

@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 
 const User = require('../models/User');
 const Task = require('../models/Task');
+const fetchuser = require('../middleware/fetchuser');
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,6 +24,7 @@ router.post('/signup', async (req, res) => {
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ error: error });
+        // console.log(error);
     }
 });
 
@@ -58,9 +60,18 @@ router.post('/login', async (req, res) => {
  
     } catch (error) {
         res.status(500).json(error);
-        console.log(error);
+        console.log({error: error});
     }
 });
+
+router.get('/getuser', fetchuser, async (req, res)=>{
+    try {
+        const {userId, ...rest} = req.user;
+        res.status(200).json(rest);
+    } catch (error) {
+        res.status(500).json({ error: error });
+    }
+})
 
 
 module.exports = router;

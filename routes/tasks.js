@@ -1,30 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 const Task = require('../models/Task');
-const dotenv = require('dotenv');
-dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET;
+const fetchuser = require('../middleware/fetchuser');
 
-const fetchuser = (req, res, next) => {
-    // Get the user from the jwt token and append and add id to req object
-    const token = req.header('auth-token');
-    if(!token){
-        res.status(401).send({error: "Please authenticate using a valid token"});
-    }
-    try {
-        const data = jwt.verify(token, JWT_SECRET);
-        req.user = data.user;
-        next();
-        
-    } catch (error) {
-        res.status(401).send({error: "Please authenticate using a valid token"});
-    }
-}
 
 // add task for the authenticated user
-router.post('/addtask', fetchuser, async (req, res, next) => {
+router.post('/addtask', fetchuser, async (req, res) => {
     try {
         const {task} = req.body;
         const data = new Task({task, user: req.user.userId});
@@ -44,7 +26,7 @@ router.get('/gettasks', fetchuser, async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ error: error });
-}
+    }
 });
 
 // Get a single task of the authenticated user
@@ -55,7 +37,7 @@ router.get('/gettasks/:id', fetchuser, async (req, res) => {
             res.status(200).json(task);
         }
         else{
-            res.status(404).json("Not Found");
+            res.status(404).json({error: "Not Found"});
 
         }
 
@@ -79,7 +61,7 @@ router.patch('/:id', fetchuser, async (req, res) => {
                 );
                 res.status(200).json(updatedTask);
             } catch (error) {
-                res.status(500).json(error);
+                res.status(500).json({error: error});
             }
         } else{
             res.status(401).json("You can update only your task");

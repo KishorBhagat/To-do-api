@@ -10,7 +10,7 @@ const UserVerificationSchema = new mongoose.Schema({
     createdAt: {
         type: Date
     },
-    createdAt: {
+    expiresAt: {
         type: Date
     }
 });

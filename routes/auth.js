@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const Task = require('../models/Task');
 const UserVerification = require('../models/UserVerification');
+const PasswordReset = require('../models/PasswordReset');
 const fetchuser = require('../middleware/fetchuser');
 
 dotenv.config();
@@ -30,7 +31,7 @@ transporter.verify((error, success) => {
     }
     else {
         console.log("Ready for messages");
-        console.log("Success");
+        console.log(success);
     }
 });
 
@@ -49,7 +50,7 @@ const sendVerificationEmail = async ({ _id, email }, res) => {
     try {
         // hash the uniqueString
         const hashedUniqueString = await bcrypt.hash(uniqueString, saltRounds);
-            
+
         // set values in UserVerification collection
         const newVerification = new UserVerification({
             userId: _id,
@@ -63,11 +64,11 @@ const sendVerificationEmail = async ({ _id, email }, res) => {
             status: "PENDING",
             message: "Verification email sent"
         });
-         
+
     } catch (error) {
         console.log(error);
         res.json({ error: error });
-    }   
+    }
 }
 
 // verify email
@@ -81,7 +82,7 @@ router.get("/verify/:userId/:uniqueString", (req, res) => {
                 const { expiresAt } = result[0];
                 const hashedUniqueString = result[0].uniqueString;
 
-                if (expiresAt < Date.now()) {
+                if (!(expiresAt < Date.now())) {
                     // record has expired so we delete it
                     UserVerification.deleteOne({ userId })
                         .then(result => {
@@ -149,13 +150,6 @@ router.get("/verify/:userId/:uniqueString", (req, res) => {
         })
 });
 
-// verified page route
-// router.get('/verified', (req, res) => {
-//     res.sendFile(path.join(__dirname, "../views/verified.html"))
-// });
-
-
-
 
 router.post('/signup', async (req, res) => {
     try {
@@ -189,7 +183,6 @@ router.post('/login', async (req, res) => {
             }
             else {
 
-
                 const password = req.body.password;
                 const isMatch = await bcrypt.compare(password, userData.password);
                 if (isMatch) {
@@ -212,8 +205,6 @@ router.post('/login', async (req, res) => {
                     res.status(400).json({ error: "Invalid Credentials" });
                 }
 
-
-
             }
 
         }
@@ -234,6 +225,138 @@ router.get('/getuser', fetchuser, async (req, res) => {
 })
 
 
+// send mail for passwor reset
+const sendPasswordResetMail = async ({ _id, username, email }, code, passwordResetToken, res) => {
+    const currentUrl = "http://localhost:5000/";
+    const mailOptions = {
+        from: process.env.AUTH_EMAIL,
+        to: email,
+        subject: "Password recovery code",
+        html: `<p>Hi <b>${username}</b>,</p>
+                <p>We received a request to reset your To-do App password.</p>
+                <p>Enter the following code to reset your password.</p>
+                <h1>${code}</h1>
+                <p>The code will expire in <b>10 minutes</b>.</p>`
+
+    };
+
+    try {
+        const mail = await transporter.sendMail(mailOptions);
+        res.json({
+            status: "PENDING",
+            message: "Password reset code sent to mail",
+            token: passwordResetToken
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: error });
+    }
+}
+
+
+// request for reset password
+router.post('/requestResetPassword', async (req, res) => {
+    try {
+        const userData = await User.findOne({ email: req.body.email });
+        if (!userData) {
+            res.status(404).json({ error: "User not found. If you don't have an account create one first." });
+        }
+        else {
+            if (userData.verified != true) {
+                res.status(401).json({ error: "Email hasn't been verified. Log in using a valid email." });
+            }
+            else {
+                // Generate an OTP of 4 digit
+                const code = (Math.floor(1000 + Math.random() * 9000)).toString();
+                const salt = await bcrypt.genSalt(10);
+                const hashedCode = await bcrypt.hash(code, salt);
+                const newPasswordReset = new PasswordReset({
+                    email: userData.email,
+                    resetCode: hashedCode,
+                    createdAt: Date.now(),
+                    expiresAt: Date.now() + 10000
+                });
+                const passwordResetData = await newPasswordReset.save();
+
+                const passwordResetToken = jwt.sign({
+                    user: {
+                        id: userData._id,
+                        email: userData.email,
+                    }
+                }, JWT_SECRET);
+
+                sendPasswordResetMail(userData, code, passwordResetToken, res);
+
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: error });
+    }
+});
+
+
+// Verify code for reset password
+router.post('/verifyResetPassword', async (req, res) => {
+    try {
+        const { email, resetCode } = req.body;
+        const userData = await PasswordReset.findOne({ email });
+        if (!userData) {
+            res.status(400).json({ error: "Code not sent" });
+        }
+        else {
+            if (!(userData.expiresAt < Date.now())) {
+                // expired
+                await PasswordReset.deleteOne({ email });
+                res.status(410).json({ error: "The code is expired." });
+            }
+            else {
+                const verifyCode = await bcrypt.compare(resetCode, userData.resetCode);
+                if (!verifyCode) {
+                    res.status(400).json({ 
+                        verified: false, 
+                        message: "Invalid code! Please check your email and enter the valid code." 
+                    });
+                }
+                else {
+                    await PasswordReset.deleteOne({ email });
+                    res.status(200).json({
+                        // status: "OK",
+                        verified: true,
+                        message: "You can now reset your password."
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: error });
+    }
+
+});
+
+
+// Reset password
+router.patch('/updatePassword', async (req, res) => {  
+    try {
+        const {id, newpassword} = req.body;
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newpassword, salt); 
+        let user = await User.findById(id);
+        const updateUser = await User.findByIdAndUpdate(
+            id,
+            {
+                password: hashedPassword
+            },
+            { new: true }
+        );
+        res.status(200).json({status: "SUCCESS", message: "Password changed successfully"});
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({ error: "Not found", message: "Not found" });
+    }
+});
 
 
 module.exports = router;

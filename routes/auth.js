@@ -153,19 +153,27 @@ router.get("/verify/:userId/:uniqueString", (req, res) => {
 
 router.post('/signup', async (req, res) => {
     try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(req.body.password, salt);
-        const newUser = new User({
-            username: req.body.username,
-            email: req.body.email,
-            password: hashedPassword
-        });
-        const user = await newUser.save();
-        // res.status(200).json(user);
-        sendVerificationEmail(user, res);
+        const {password, confirmPassword} = req.body;
+
+        if(password === confirmPassword){
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            const newUser = new User({
+                username: req.body.username,
+                email: req.body.email,
+                password: hashedPassword
+            });
+            const user = await newUser.save();
+            sendVerificationEmail(user, res);
+        }
+        else {
+            res.status(400).json({ message: "Passwords aren't matching" });
+        }
+
+        
     } catch (error) {
+        console.log(error);
         res.status(500).json({ error: error });
-        // console.log(error);
     }
 });
 
@@ -173,13 +181,13 @@ router.post('/login', async (req, res) => {
     try {
         const userData = await User.findOne({ email: req.body.email });
         if (!userData) {
-            res.status(400).json({ error: "Invalid Credentials" });
+            res.status(400).json({ message: "Invalid Credentials!" });
         }
         else {
 
             // check if th user is verified
             if (userData.verified != true) {
-                res.status(401).json({ error: "Email hasn't been verified" });
+                res.status(401).json({ message: "Email hasn't been verified" });
             }
             else {
 
@@ -202,7 +210,7 @@ router.post('/login', async (req, res) => {
                     });
                 }
                 else {
-                    res.status(400).json({ error: "Invalid Credentials" });
+                    res.status(400).json({ message: "Invalid Credentials!" });
                 }
 
             }
@@ -210,8 +218,8 @@ router.post('/login', async (req, res) => {
         }
 
     } catch (error) {
+        // console.log({ error: error });
         res.status(500).json(error);
-        console.log({ error: error });
     }
 });
 
@@ -260,11 +268,11 @@ router.post('/requestResetPassword', async (req, res) => {
     try {
         const userData = await User.findOne({ email: req.body.email });
         if (!userData) {
-            res.status(404).json({ error: "User not found. If you don't have an account create one first." });
+            res.status(404).json({ message: "User not found. If you don't have an account create one first." });
         }
         else {
             if (userData.verified != true) {
-                res.status(401).json({ error: "Email hasn't been verified. Log in using a valid email." });
+                res.status(401).json({ message: "Account hasn't been verified. Log in using a valid email." });
             }
             else {
                 // Generate an OTP of 4 digit
@@ -281,7 +289,6 @@ router.post('/requestResetPassword', async (req, res) => {
 
                 const passwordResetToken = jwt.sign({
                     user: {
-                        id: userData._id,
                         email: userData.email,
                     }
                 }, JWT_SECRET);
@@ -300,31 +307,44 @@ router.post('/requestResetPassword', async (req, res) => {
 // Verify code for reset password
 router.post('/verifyResetPassword', async (req, res) => {
     try {
-        const { email, resetCode } = req.body;
-        const userData = await PasswordReset.findOne({ email });
-        if (!userData) {
-            res.status(400).json({ error: "Code not sent" });
+
+        const resetToken = req.header('resetToken');
+        const data = jwt.verify(resetToken, JWT_SECRET);
+        const email = data.user.email;
+
+        const { resetCode } = req.body;
+        const passwordResetData = await PasswordReset.findOne({ email });
+        const userData = await User.findOne({ email });
+        if (!passwordResetData) {
+            res.status(400).json({ message: "Code not sent! The user may not be registerd." });
         }
         else {
-            if (!(userData.expiresAt < Date.now())) {
+            if (!( Date.now() > passwordResetData.expiresAt)) {
                 // expired
                 await PasswordReset.deleteOne({ email });
-                res.status(410).json({ error: "The code is expired." });
+                res.status(410).json({  verified: false, status: 'EXPIRED', message: "The code is expired."  });
             }
             else {
-                const verifyCode = await bcrypt.compare(resetCode, userData.resetCode);
+                const verifyCode = await bcrypt.compare(resetCode, passwordResetData.resetCode);
                 if (!verifyCode) {
-                    res.status(400).json({ 
-                        verified: false, 
-                        message: "Invalid code! Please check your email and enter the valid code." 
+                    res.status(400).json({
+                        verified: false,
+                        status: 'INVALID',
+                        message: "Invalid code! Please check your email and enter the valid code."
                     });
                 }
                 else {
                     await PasswordReset.deleteOne({ email });
+                    const passwordResetToken = jwt.sign({
+                        user: {
+                            id: userData._id,
+                        }
+                    }, JWT_SECRET);
                     res.status(200).json({
-                        // status: "OK",
                         verified: true,
-                        message: "You can now reset your password."
+                        status: "VERIFIED",
+                        message: "You can now reset your password.",
+                        token: passwordResetToken
                     });
                 }
             }
@@ -338,23 +358,36 @@ router.post('/verifyResetPassword', async (req, res) => {
 
 
 // Reset password
-router.patch('/updatePassword', async (req, res) => {  
+router.patch('/updatePassword', async (req, res) => {
     try {
-        const {id, newpassword} = req.body;
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newpassword, salt); 
-        let user = await User.findById(id);
-        const updateUser = await User.findByIdAndUpdate(
-            id,
-            {
-                password: hashedPassword
-            },
-            { new: true }
-        );
-        res.status(200).json({status: "SUCCESS", message: "Password changed successfully"});
+
+        const resetToken = req.header('resetToken');
+        const data = jwt.verify(resetToken, JWT_SECRET);
+        const id = data.user.id;
+
+        const { newpassword, confirmNewPassword } = req.body;
+
+        if(newpassword === confirmNewPassword){
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newpassword, salt);
+            let user = await User.findById(id);
+            const updateUser = await User.findByIdAndUpdate(
+                id,
+                {
+                    password: hashedPassword
+                },
+                { new: true }
+            );
+            res.status(200).json({ status: "SUCCESS", message: "Password changed successfully!" });
+        }
+        else {
+            res.status(400).json({ status: "FAILED", message: "Passwords aren't matching" });
+        }
+
     } catch (error) {
         console.log(error);
-        res.status(404).json({ error: "Not found", message: "Not found" });
+        res.status(404).json({ error: "Not found", status: "FAILED", message: "Not found" });
     }
 });
 

@@ -16,6 +16,9 @@ const fetchuser = require('../middleware/fetchuser');
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const cookieParser = require('cookie-parser');
+router.use(cookieParser());
+
 
 let transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -195,6 +198,7 @@ router.post('/login', async (req, res) => {
                 const isMatch = await bcrypt.compare(password, userData.password);
                 if (isMatch) {
                     const authToken = jwt.sign({
+                        // expiresAt: 24*60*60,
                         user: {
                             userId: userData.id,
                             usename: userData.username,
@@ -202,7 +206,8 @@ router.post('/login', async (req, res) => {
                         }
                     }, JWT_SECRET);
 
-                    // res.status(200).json(authToken);
+                    res.cookie('authToken', authToken, { httpOnly: true, maxAge: 1000*60*60*24 });
+
                     res.status(200).json({
                         usename: userData.username,
                         email: userData.email,
@@ -233,7 +238,7 @@ router.get('/getuser', fetchuser, async (req, res) => {
 })
 
 
-// send mail for passwor reset
+// Function to send mail for passwor reset
 const sendPasswordResetMail = async ({ _id, username, email }, code, passwordResetToken, res) => {
     const currentUrl = "http://localhost:5000/";
     const mailOptions = {
@@ -252,7 +257,7 @@ const sendPasswordResetMail = async ({ _id, username, email }, code, passwordRes
         const mail = await transporter.sendMail(mailOptions);
         res.json({
             status: "PENDING",
-            message: "Password reset code sent to mail",
+            message: "A security code is send to your email. Please check your email.",
             token: passwordResetToken
         });
 
@@ -285,6 +290,11 @@ router.post('/requestResetPassword', async (req, res) => {
                     createdAt: Date.now(),
                     expiresAt: Date.now() + 10000
                 });
+                // Check if an OTP already exists for the same requested email in PasswordReset collection
+                if(await PasswordReset.findOne({email: req.body.email})){
+                    await PasswordReset.deleteMany({ email: req.body.email });
+                }
+
                 const passwordResetData = await newPasswordReset.save();
 
                 const passwordResetToken = jwt.sign({

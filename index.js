@@ -20,7 +20,7 @@ app.use(cors({ origin: true, credentials: true}));
 //     res.status(200).json("Hello World");
 // });
 app.use('/api/auth', authRoute);
-app.use('/api/task', tasksRoute);
+app.use('/api/tasks', tasksRoute);
 
 
 app.listen(port, ()=>{

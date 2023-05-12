@@ -228,7 +228,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/getuser', fetchuser, async (req, res) => {
+router.get('/user', fetchuser, async (req, res) => {
     try {
         const { userId, ...rest } = req.user;
         res.status(200).json(rest);
@@ -238,7 +238,7 @@ router.get('/getuser', fetchuser, async (req, res) => {
 })
 
 
-// Function to send mail for passwor reset
+// Function to send mail for password reset
 const sendPasswordResetMail = async ({ _id, username, email }, code, passwordResetToken, res) => {
     const currentUrl = "http://localhost:5000/";
     const mailOptions = {

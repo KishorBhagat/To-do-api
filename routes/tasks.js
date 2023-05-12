@@ -6,7 +6,7 @@ const fetchuser = require('../middleware/fetchuser');
 
 
 // add task for the authenticated user
-router.post('/addtask', fetchuser, async (req, res) => {
+router.post('/', fetchuser, async (req, res) => {
     try {
         const { task } = req.body;
         const data = new Task({ task, user: req.user.userId });
@@ -19,7 +19,7 @@ router.post('/addtask', fetchuser, async (req, res) => {
 });
 
 // Get all tasks of the authenticated user
-router.get('/gettasks', fetchuser, async (req, res) => {
+router.get('/', fetchuser, async (req, res) => {
     try {
         const allTasks = await Task.find({ user: req.user.userId });
         res.status(200).json(allTasks);
@@ -30,7 +30,7 @@ router.get('/gettasks', fetchuser, async (req, res) => {
 });
 
 // Get a single task of the authenticated user
-router.get('/gettasks/:id', fetchuser, async (req, res) => {
+router.get('/:id', fetchuser, async (req, res) => {
     try {
         const task = await Task.findById({ _id: req.params.id });
         if (req.user.userId === task.user) {

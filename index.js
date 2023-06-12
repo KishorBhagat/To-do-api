@@ -1,5 +1,5 @@
 const express = require('express');
-const connectDB = require('./db');
+const connectDB = require('./config/db');
 const app = express();
 const authRoute = require('./routes/auth');
 const tasksRoute = require('./routes/tasks');
@@ -16,9 +16,7 @@ app.use(cookieParser());
 
 app.use(cors({ origin: true, credentials: true}));
 
-// app.get('/', (req, res)=>{
-//     res.status(200).json("Hello World");
-// });
+
 app.use('/api/auth', authRoute);
 app.use('/api/tasks', tasksRoute);
 

@@ -3,6 +3,7 @@ const connectDB = require('./config/db');
 const app = express();
 const authRoute = require('./routes/auth');
 const tasksRoute = require('./routes/tasks');
+const refreshToken = require('./routes/refreshToken');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
@@ -19,6 +20,7 @@ app.use(cors({ origin: true, credentials: true}));
 
 app.use('/api/auth', authRoute);
 app.use('/api/tasks', tasksRoute);
+app.use('/refreshToken', refreshToken);
 
 
 app.listen(port, ()=>{

@@ -17,7 +17,9 @@ const sendPasswordResetMail = async ({ _id, username, email }, code, passwordRes
                       <p>We received a request to reset your To-do App password.</p>
                       <p>Enter the following code to reset your password.</p>
                       <h1>${code}</h1>
-                      <p>The code will expire in <b>10 minutes</b>.</p>`;
+                      <p>The code will expire in <b>10 minutes</b>.</p>
+                      `;
+    //   <p>Click <a href="http://localhost:3000/code">here</a> to enter otp.</p>
 
     try {
         sendEmail(email, subject, mailBody);
@@ -52,16 +54,17 @@ const handleRequestResetPassword = async (req, res) => {
                     email: userData.email,
                     resetCode: hashedCode,
                     createdAt: Date.now(),
-                    expiresAt: Date.now() + 10000
+                    expiresAt: Date.now() + 600000
                 });
                 // Check if an OTP already exists for the same requested email in PasswordReset collection
-                if(await PasswordReset.findOne({email: req.body.email})){
+                if (await PasswordReset.findOne({ email: req.body.email })) {
                     await PasswordReset.deleteMany({ email: req.body.email });
                 }
 
                 const passwordResetData = await newPasswordReset.save();
 
                 const passwordResetToken = jwt.sign({
+                    // expiresAt: new Date() + 60000,
                     user: {
                         email: userData.email,
                     }
@@ -89,13 +92,14 @@ const handleVerifyResetPassword = async (req, res) => {
         const passwordResetData = await PasswordReset.findOne({ email });
         const userData = await User.findOne({ email });
         if (!passwordResetData) {
-            res.status(400).json({ message: "Code not sent! The user may not be registerd." });
+            res.status(400).json({ error: { message: "Code not sent! The user may not be registerd." } });
         }
         else {
-            if (!( Date.now() > passwordResetData.expiresAt)) {
+
+            if ((passwordResetData.expiresAt < Date.now())) {
                 // expired
                 await PasswordReset.deleteOne({ email });
-                res.status(410).json({  verified: false, status: 'EXPIRED', message: "The code is expired."  });
+                res.status(410).json({ verified: false, status: 'EXPIRED', message: "The code is expired." });
             }
             else {
                 const verifyCode = await bcrypt.compare(resetCode, passwordResetData.resetCode);
@@ -112,7 +116,7 @@ const handleVerifyResetPassword = async (req, res) => {
                         user: {
                             id: userData._id,
                         }
-                    }, JWT_SECRET);
+                    }, JWT_SECRET, { expiresIn: "600000ms" });    // expiresIn: 10 min
                     res.status(200).json({
                         verified: true,
                         status: "VERIFIED",
@@ -123,7 +127,7 @@ const handleVerifyResetPassword = async (req, res) => {
             }
         }
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         res.status(500).json({ error: error });
     }
 }
@@ -138,7 +142,7 @@ const handleUpdatePassword = async (req, res) => {
 
         const { newpassword, confirmNewPassword } = req.body;
 
-        if(newpassword === confirmNewPassword){
+        if (newpassword === confirmNewPassword) {
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(newpassword, salt);
@@ -150,15 +154,15 @@ const handleUpdatePassword = async (req, res) => {
                 },
                 { new: true }
             );
-            res.status(200).json({ status: "SUCCESS", message: "Password changed successfully!" });
+            return res.status(200).json({ status: "SUCCESS", message: "Password changed successfully!" });
         }
         else {
-            res.status(400).json({ status: "FAILED", message: "Passwords aren't matching" });
+            return res.status(400).json({ status: "FAILED", message: "Passwords aren't matching" });
         }
 
     } catch (error) {
-        console.log(error);
-        res.status(404).json({ error: "Not found", status: "FAILED", message: "Not found" });
+        // console.log(error);
+        return res.status(404).json({ error: error, status: "FAILED", message: "Not found" });
     }
 }
 

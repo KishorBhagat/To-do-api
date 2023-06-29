@@ -3,8 +3,9 @@ const bcrypt = require('bcrypt')
 // const uuidv4 = require('uuid');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const {sendEmail} = require('../utils/sendEmail');
+const { sendEmail } = require('../utils/sendEmail');
 const User = require('../models/User');
+const Task = require('../models/Task');
 const UserVerification = require('../models/UserVerification');
 
 
@@ -14,13 +15,22 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 
 const sendVerificationEmail = async ({ _id, email }, res) => {
-    const currentUrl = "https://to-do-api-7lgg.onrender.com/";
+    const currentUrl = process.env.HOST_URL;
     const uniqueString = uuidv4() + _id;
     const subject = "Verify your email";
-    const mailBody = `<p>Verify your email address to complete the sign up and login into your account.</p><p>This link will <b>expire in 10 minutes</b>.</p><p>Click <a href=${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}>here </a> to proceed.</p>`;
-
+    const mailBody = `<p>Verify your email address to complete the sign up and login into your account.</p>
+                      <p>Click the below link to proceed.</p>
+                      <p>(The link will <b>expire in 10 minutes.)</b>
+                      <p>${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}</p>`;
+    // </p><p>Click <a href=${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}>here </a> to proceed.</p>
     const saltRounds = 10;
     try {
+
+        const existingUserVerification = await UserVerification.findOne({ userId: _id });
+        if (existingUserVerification) {
+            await UserVerification.deleteMany({ userId: _id });
+        }
+
         // hash the uniqueString
         const hashedUniqueString = await bcrypt.hash(uniqueString, saltRounds);
 
@@ -29,7 +39,7 @@ const sendVerificationEmail = async ({ _id, email }, res) => {
             userId: _id,
             uniqueString: hashedUniqueString,
             createdAt: Date.now(),
-            expiresAt: Date.now() + 10000
+            expiresAt: Date.now() + 600000
         });
         const verificationData = await newVerification.save();
         sendEmail(email, subject, mailBody)
@@ -64,18 +74,35 @@ const handleLogin = async (req, res) => {
                 const password = req.body.password;
                 const isMatch = await bcrypt.compare(password, userData.password);
                 if (isMatch) {
-                    const authToken = jwt.sign({
-                        // expiresAt: 24*60*60,
+                    const accessToken = jwt.sign({
+                        // expiresAt: Date.now() + 1000*60*60,     // 1 hour
+                        token_type: "access",
                         user: {
                             userId: userData.id,
                             usename: userData.username,
-                            email: userData.email,
+                            email: userData.email
                         }
-                    }, JWT_SECRET);
+                    }, JWT_SECRET, { expiresIn: "1h" });
 
-                    res.cookie('authToken', authToken, { httpOnly: true, maxAge: 1000*60*60*24 });
+                    const refreshToken = jwt.sign({
+                        // expiresAt: Date.now() + 1000*60*60*24*15,     // 15 days
+                        token_type: "refresh",
+                        user: {
+                            userId: userData.id,
+                            usename: userData.username,
+                            email: userData.email
+                        }
+                    }, JWT_SECRET, { expiresIn: "15d" });
+
+                    const authToken = {
+                        "refresh": refreshToken,
+                        "access": accessToken
+                    }
+
+                    res.cookie('authToken', authToken.access, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 });
 
                     res.status(200).json({
+                        _id: userData._id,
                         usename: userData.username,
                         email: userData.email,
                         token: authToken
@@ -97,26 +124,37 @@ const handleLogin = async (req, res) => {
 
 const handleSignup = async (req, res) => {
     try {
-        const {password, confirmPassword} = req.body;
+        const { username, email, password, confirmPassword } = req.body;
 
-        if(password === confirmPassword){
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-            const newUser = new User({
-                username: req.body.username,
-                email: req.body.email,
-                password: hashedPassword
-            });
-            const user = await newUser.save();
-            sendVerificationEmail(user, res);
+        const existingUser = await User.findOne({ email });
+
+        if (!existingUser) {     // Check if a user already exists with given email but is unverified
+            if (password === confirmPassword) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(password, salt);
+                const newUser = new User({
+                    username,
+                    email,
+                    password: hashedPassword
+                });
+                const user = await newUser.save();
+                sendVerificationEmail(user, res);
+            }
+            else {
+                res.status(400).json({ error: { message: "Passwords aren't matching" } });
+            }
         }
         else {
-            res.status(400).json({ message: "Passwords aren't matching" });
+            if (!existingUser.verified) {
+                sendVerificationEmail(existingUser, res);
+            }
+            res.status(409).json({ error: { message: "User already registerd." } })
         }
 
-        
+
+
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         res.status(500).json({ error: error });
     }
 }
@@ -130,8 +168,7 @@ const handleVerifyEmail = (req, res) => {
                 // user verification record exists so we proceed
                 const { expiresAt } = result[0];
                 const hashedUniqueString = result[0].uniqueString;
-
-                if (!(expiresAt < Date.now())) {
+                if (expiresAt < new Date()) {
                     // record has expired so we delete it
                     UserVerification.deleteOne({ userId })
                         .then(result => {
@@ -199,8 +236,25 @@ const handleVerifyEmail = (req, res) => {
         })
 }
 
+
+const handleDeleteUserAccount = async (req, res) => {
+    const { password } = req.body;
+    const { userId, email } = req.user;
+    const userAccount = await User.findOne({ email });
+    if (userAccount) {
+        const isMatch = await bcrypt.compare(password, userAccount.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid Password" });
+        }
+        await User.deleteOne({ email });
+        await Task.deleteMany({ user: userId });
+        res.status(200).json({ message: "Account Deleted Successfully!" });
+    }
+}
+
 module.exports = {
     handleLogin,
     handleSignup,
-    handleVerifyEmail
+    handleVerifyEmail,
+    handleDeleteUserAccount
 };

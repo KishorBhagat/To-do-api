@@ -1,18 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const dotenv = require('dotenv');
+// const dotenv = require('dotenv');
 const { v4: uuidv4 } = require('uuid');
 
 const fetchuser = require('../middleware/fetchuser');
 
-dotenv.config();
+// dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const cookieParser = require('cookie-parser');
 router.use(cookieParser());
 
 
-const { handleLogin, handleSignup, handleVerifyEmail } = require('../controllers/authController');
+const { handleLogin, handleSignup, handleVerifyEmail, handleDeleteUserAccount } = require('../controllers/authController');
 const { handleRequestResetPassword, handleVerifyResetPassword, handleUpdatePassword } = require('../controllers/resetPasswordController');
 
 // Signup user
@@ -42,5 +42,8 @@ router.post('/verifyResetPassword', handleVerifyResetPassword);
 
 // Reset or Update password
 router.patch('/updatePassword', handleUpdatePassword);
+
+// Delete authenticated user account
+router.delete('/deleteUserAccount', fetchuser, handleDeleteUserAccount);
 
 module.exports = router;

@@ -15,15 +15,15 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    date: {
-        type: Date,
-        default: Date.now()
-    },
+    // date: {
+    //     type: Date,
+    //     default: Date.now()
+    // },
     verified: {
         type: Boolean,
         default: false
     }
-});
+}, {timestamps: true});
 
 const User = new mongoose.model('User', UserSchema);
 module.exports = User;

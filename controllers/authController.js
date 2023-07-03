@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const { sendEmail } = require('../utils/sendEmail');
 const User = require('../models/User');
+const Collection = require('../models/Collection');
 const Task = require('../models/Task');
 const UserVerification = require('../models/UserVerification');
 
@@ -82,7 +83,7 @@ const handleLogin = async (req, res) => {
                             usename: userData.username,
                             email: userData.email
                         }
-                    }, JWT_SECRET, { expiresIn: "1h" });
+                    }, JWT_SECRET, { expiresIn: "1d" });
 
                     const refreshToken = jwt.sign({
                         // expiresAt: Date.now() + 1000*60*60*24*15,     // 15 days
@@ -247,6 +248,7 @@ const handleDeleteUserAccount = async (req, res) => {
             return res.status(400).json({ message: "Invalid Password" });
         }
         await User.deleteOne({ email });
+        await Collection.deleteMany({ userId: userId });
         await Task.deleteMany({ user: userId });
         res.status(200).json({ message: "Account Deleted Successfully!" });
     }

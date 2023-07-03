@@ -3,8 +3,8 @@ const fetchuser = require('../middleware/fetchuser');
 
 const handleAddNewTask = async (req, res) => {
     try {
-        const { task } = req.body;
-        const data = new Task({ task, user: req.user.userId });
+        const { task, collection_name } = req.body;
+        const data = new Task({ task, user: req.user.userId, collection_name });
         const saveData = await data.save();
         res.status(200).json(data);
     } catch (error) {
@@ -56,16 +56,28 @@ const handleDeleteTask = async (req, res) => {
 
 const handleGetAllTask = async (req, res) => {
     try {
-        const allTasks = await Task.find({ user: req.user.userId });
-        res.status(200).json(allTasks);
+        const {collection_name, task} = req.query;
+        const queryObject = {};
+        if(collection_name){
+            queryObject.collection_name = { $regex: collection_name, $options: 'i'};
+        }
+        if(task){
+            queryObject.task = { $regex: task, $options: 'i'};
+        }
+        const data = await Task.find({ user: req.user.userId , ...queryObject });
+        // console.log(Object.keys(req.query).length)
+        res.status(200).json(data);
 
     } catch (error) {
+        console.log(error)
         res.status(500).json({ error: error });
     }
 }
 
 const handleGetSingleTask = async (req, res) => {
     try {
+        console.log(req.params.id);
+        
         const task = await Task.findById({ _id: req.params.id });
         if (req.user.userId === task.user) {
             res.status(200).json(task);
@@ -85,5 +97,5 @@ module.exports = {
     handleUpdateTask,
     handleDeleteTask,
     handleGetAllTask,
-    handleGetSingleTask
+    handleGetSingleTask,
 }

@@ -7,15 +7,15 @@ const { handleAddNewTask, handleUpdateTask, handleDeleteTask, handleGetAllTask, 
 router.post('/', fetchuser, handleAddNewTask);
 
 // Get all tasks of the authenticated user
-router.get('/', fetchuser, handleGetAllTask);
+router.get('/', fetchuser, handleGetAllTask);   // TODO: Add queries to search by collection_name, task_name
 
 // Get a single task of the authenticated user
 router.get('/:id', fetchuser, handleGetSingleTask);
 
-// Update notes of authenticated user
+// Update task of authenticated user
 router.patch('/:id', fetchuser, handleUpdateTask);
 
-// delete notes of the authenticated user
+// delete task of the authenticated user
 router.delete('/:id', fetchuser, handleDeleteTask);
 
 

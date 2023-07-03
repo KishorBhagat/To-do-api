@@ -115,7 +115,7 @@ const handleLogin = async (req, res) => {
                     });
                 }
                 else {
-                    res.status(400).json({ message: "Invalid Credentials!" });
+                    res.status(400).json({ error: { message: "Invalid Credentials!" } });
                 }
 
             }

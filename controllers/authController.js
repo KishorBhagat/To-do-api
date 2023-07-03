@@ -100,12 +100,12 @@ const handleLogin = async (req, res) => {
                         "access": accessToken
                     }
 
-                    res.cookie('authToken', authToken.access, { 
-                        path: '/', 
-                        httpOnly: true, 
-                        maxAge: 1000 * 60 * 60 * 24, 
-                        secure: true 
-                    });
+                    // res.cookie('authToken', authToken.access, { 
+                    //     path: '/', 
+                    //     httpOnly: true, 
+                    //     maxAge: 1000 * 60 * 60 * 24, 
+                    //     secure: true 
+                    // });
 
                     res.status(200).json({
                         _id: userData._id,

@@ -101,7 +101,6 @@ const handleLogin = async (req, res) => {
                     }
 
                     res.cookie('authToken', authToken.access, { 
-                        domain: ['localhost', '127.0.0.1'], 
                         path: '/', 
                         httpOnly: true, 
                         maxAge: 1000 * 60 * 60 * 24, 

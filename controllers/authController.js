@@ -80,10 +80,10 @@ const handleLogin = async (req, res) => {
                         token_type: "access",
                         user: {
                             userId: userData.id,
-                            usename: userData.username,
+                            username: userData.username,
                             email: userData.email
                         }
-                    }, JWT_SECRET, { expiresIn: "1d" });
+                    }, JWT_SECRET, { expiresIn: 1000*60*5 });
 
                     const refreshToken = jwt.sign({
                         // expiresAt: Date.now() + 1000*60*60*24*15,     // 15 days
@@ -106,6 +106,15 @@ const handleLogin = async (req, res) => {
                     //     maxAge: 1000 * 60 * 60 * 24, 
                     //     secure: true 
                     // });
+
+                    res.cookie('refreshToken', authToken.refresh, {
+                        path: '/', 
+                        httpOnly: true, 
+                        maxAge: 1000 * 60 * 60 * 24, 
+                        secure: true,
+                        sameSite: 'None' 
+                    })
+
 
                     res.status(200).json({
                         _id: userData._id,

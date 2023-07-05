@@ -1,4 +1,5 @@
 const Collection = require('../models/Collection');
+const Task = require('../models/Task');
 
 
 const handleAddNewCollection = async (req, res) => {
@@ -50,6 +51,7 @@ const handleDeleteCollection = async (req, res) => {
         let collection = await Collection.findById(req.params.id);
         if (collection.userId === req.user.userId) {
             await collection.delete();
+            await Task.deleteMany({ user: collection.userId, collection_name: collection.collection_name });
             res.status(200).json({ message: "Collection deleted" });
         } else {
             res.status(401).json({error: {message: "You can delete only your collection"}});

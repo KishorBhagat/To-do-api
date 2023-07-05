@@ -4,9 +4,12 @@ const TaskSchema = new mongoose.Schema({
     user: {
         type: String
     },
+    collection_id: {
+        type: String,
+        required: true
+    },
     collection_name: {
         type: String,
-        default: "default"
     },
     task: {
         type: String,

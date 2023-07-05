@@ -3,8 +3,8 @@ const fetchuser = require('../middleware/fetchuser');
 
 const handleAddNewTask = async (req, res) => {
     try {
-        const { task, collection_name } = req.body;
-        const data = new Task({ task, user: req.user.userId, collection_name });
+        const { task, collection_id, collection_name } = req.body;
+        const data = new Task({ task, user: req.user.userId, collection_id, collection_name: req.body.collection_name });
         const saveData = await data.save();
         res.status(200).json(data);
     } catch (error) {

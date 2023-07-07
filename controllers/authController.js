@@ -83,7 +83,7 @@ const handleLogin = async (req, res) => {
                             username: userData.username,
                             email: userData.email
                         }
-                    }, JWT_SECRET, { expiresIn: 1000*60*5 });
+                    }, JWT_SECRET, { expiresIn: "600000" });
 
                     const refreshToken = jwt.sign({
                         // expiresAt: Date.now() + 1000*60*60*24*15,     // 15 days
@@ -100,21 +100,13 @@ const handleLogin = async (req, res) => {
                         "access": accessToken
                     }
 
-                    // res.cookie('authToken', authToken.access, { 
-                    //     path: '/', 
-                    //     httpOnly: true, 
-                    //     maxAge: 1000 * 60 * 60 * 24, 
-                    //     secure: true 
-                    // });
-
                     res.cookie('refreshToken', authToken.refresh, {
                         path: '/', 
                         httpOnly: true, 
-                        maxAge: 1000 * 60 * 60 * 24, 
+                        maxAge: 1000*60*60*24*15, 
                         secure: true,
                         sameSite: 'None' 
                     })
-
 
                     res.status(200).json({
                         _id: userData._id,
@@ -268,9 +260,21 @@ const handleDeleteUserAccount = async (req, res) => {
     }
 }
 
+const handleLogout = async (req, res) => {
+    res.cookie('refreshToken', '', {
+        path: '/', 
+        httpOnly: true, 
+        maxAge: 1000, 
+        secure: true,
+        sameSite: 'None'  
+    });
+    res.status(200).json({message: 'logged out successfull'});
+}
+
 module.exports = {
     handleLogin,
     handleSignup,
     handleVerifyEmail,
-    handleDeleteUserAccount
+    handleDeleteUserAccount,
+    handleLogout
 };

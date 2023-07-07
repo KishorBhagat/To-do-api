@@ -50,14 +50,15 @@ const handleDeleteCollection = async (req, res) => {
     try {
         let collection = await Collection.findById(req.params.id);
         if (collection.userId === req.user.userId) {
-            await collection.delete();
-            await Task.deleteMany({ user: collection.userId, collection_name: collection.collection_name });
+            const deletedCollection = await collection.delete();
+            const deletedTasks =await Task.deleteMany({ user: collection.userId, collection_id: collection._id });
             res.status(200).json({ message: "Collection deleted" });
         } else {
             res.status(401).json({error: {message: "You can delete only your collection"}});
         }
 
     } catch (error) {
+        console.log(error)
         res.status(404).json({ error: "Not found" });
     }
 }

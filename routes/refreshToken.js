@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken');
 
 router.post('/', async (req, res) => {
     try {
-        // const token = req.header('token')
-        const refreshToken = req.body.refreshToken;
+        const refreshToken = req.cookies.refreshToken || req.header('refreshToken');
         const isValidRefreshToken = jwt.verify(refreshToken, process.env.JWT_SECRET, (error, decoded) => {
             if(error){
                 return res.status(403).json({error})
@@ -14,7 +13,7 @@ router.post('/', async (req, res) => {
             const newAccessToken = jwt.sign({
                 token_type: "access",
                 user
-            }, process.env.JWT_SECRET, { expiresIn: "1h" });
+            }, process.env.JWT_SECRET, { expiresIn: "600000" });
     
             res.status(200).json({token: {access: newAccessToken}})
         });

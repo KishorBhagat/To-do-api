@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 router.use(cookieParser());
 
 
-const { handleLogin, handleSignup, handleVerifyEmail, handleDeleteUserAccount } = require('../controllers/authController');
+const { handleLogin, handleSignup, handleVerifyEmail, handleDeleteUserAccount, handleLogout } = require('../controllers/authController');
 const { handleRequestResetPassword, handleVerifyResetPassword, handleUpdatePassword } = require('../controllers/resetPasswordController');
 
 // Signup user
@@ -45,5 +45,8 @@ router.patch('/updatePassword', handleUpdatePassword);
 
 // Delete authenticated user account
 router.delete('/deleteUserAccount', fetchuser, handleDeleteUserAccount);
+
+// Logout user
+router.post('/logout', handleLogout);
 
 module.exports = router;

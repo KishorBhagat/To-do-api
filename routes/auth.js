@@ -30,7 +30,7 @@ router.get('/user', fetchuser, async (req, res) => {
         const { userId, ...rest } = req.user;
         res.status(200).json(rest);
     } catch (error) {
-        res.status(500).json({ error: error });
+        res.status(500).json({ error });
     }
 })
 

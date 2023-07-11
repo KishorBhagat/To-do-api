@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
-        *{  
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: sans-serif;
         }
-        :root{
+
+        :root {
             --primary-color: #64b5f6
         }
-        body{
+
+        body {
             background-color: var(--primary-color);
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
         }
-        .box{
+
+        .box {
             background-color: #fff;
             border-radius: 10px;
             /* height: 400px; */
@@ -34,12 +38,14 @@
             flex-direction: column;
             box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
         }
-        .para{
+
+        .para {
             color: grey;
             margin: 20px 0;
             text-align: center;
         }
-        .check{
+
+        .check {
             height: 70px;
             width: 70px;
             border-radius: 50%;
@@ -49,19 +55,48 @@
             justify-content: center;
             margin-bottom: 30px;
         }
-        .check svg{
+
+        .check svg {
             color: white;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            transition: .3s ease;
+            text-decoration: underline;
         }
     </style>
 </head>
+
 <body>
     <div class="box">
-        <div class="check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z"/></svg></div>
+        <div class="check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="currentColor">
+                <path d="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" />
+            </svg></div>
         <h3>Verified!</h3>
         <div class="para">
             <p>You have successfully verified your account.</p>
             <p>You can now log in.</p>
         </div>
+        <a id="loginLink" target="_blank">Go to Log in page.</a>
     </div>
+
+    <script>
+        const loginLink = document.querySelector('#loginLink');
+        const element = document.getElementById('yourElementId');
+
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const searchParams = Object.fromEntries(urlSearchParams.entries());
+
+        if (searchParams.hasOwnProperty('login')) {
+            loginLink.setAttribute('href', searchParams['login'] + '/login');
+        }
+    </script>
 </body>
+
 </html>

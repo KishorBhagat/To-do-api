@@ -15,14 +15,16 @@ const UserVerification = require('../models/UserVerification');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 
-const sendVerificationEmail = async ({ _id, email }, res) => {
+const sendVerificationEmail = async (user, req, res) => {
+    const { _id, email } = user;
+    const origin = req.headers.origin;
     const currentUrl = process.env.HOST_URL;
     const uniqueString = uuidv4() + _id;
     const subject = "Verify your email";
     const mailBody = `<p>Verify your email address to complete the sign up and login into your account.</p>
                       <p>Click the below link to proceed.</p>
                       <p>(The link will <b>expire in 10 minutes.)</b>
-                      <p>${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}</p>`;
+                      <p>${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString + '/?login=' + origin}</p>`;
     // </p><p>Click <a href=${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}>here </a> to proceed.</p>
     const saltRounds = 10;
     try {
@@ -38,6 +40,7 @@ const sendVerificationEmail = async ({ _id, email }, res) => {
         // set values in UserVerification collection
         const newVerification = new UserVerification({
             userId: _id,
+            email: email,
             uniqueString: hashedUniqueString,
             createdAt: Date.now(),
             expiresAt: Date.now() + 600000
@@ -51,8 +54,8 @@ const sendVerificationEmail = async ({ _id, email }, res) => {
         });
 
     } catch (error) {
-        console.log(error);
-        res.json({ error: error });
+        // console.log(error);
+        res.json({ error });
     }
 }
 
@@ -62,13 +65,13 @@ const handleLogin = async (req, res) => {
     try {
         const userData = await User.findOne({ email: req.body.email });
         if (!userData) {
-            res.status(400).json({ message: "Invalid Credentials!" });
+            res.status(400).json({ error: { message: "Invalid Credentials!" } });
         }
         else {
 
             // check if th user is verified
             if (userData.verified != true) {
-                res.status(401).json({ message: "Email hasn't been verified" });
+                res.status(401).json({ error: { message: "Email hasn't been verified" } });
             }
             else {
 
@@ -76,7 +79,6 @@ const handleLogin = async (req, res) => {
                 const isMatch = await bcrypt.compare(password, userData.password);
                 if (isMatch) {
                     const accessToken = jwt.sign({
-                        // expiresAt: Date.now() + 1000*60*60,     // 1 hour
                         token_type: "access",
                         user: {
                             userId: userData.id,
@@ -86,11 +88,10 @@ const handleLogin = async (req, res) => {
                     }, JWT_SECRET, { expiresIn: "600000" });
 
                     const refreshToken = jwt.sign({
-                        // expiresAt: Date.now() + 1000*60*60*24*15,     // 15 days
                         token_type: "refresh",
                         user: {
                             userId: userData.id,
-                            usename: userData.username,
+                            username: userData.username,
                             email: userData.email
                         }
                     }, JWT_SECRET, { expiresIn: "15d" });
@@ -101,16 +102,16 @@ const handleLogin = async (req, res) => {
                     }
 
                     res.cookie('refreshToken', authToken.refresh, {
-                        path: '/', 
-                        httpOnly: true, 
-                        maxAge: 1000*60*60*24*15, 
+                        path: '/',
+                        httpOnly: true,
+                        maxAge: 1000 * 60 * 60 * 24 * 15,
                         secure: true,
-                        sameSite: 'None' 
+                        sameSite: 'None'
                     })
 
                     res.status(200).json({
                         _id: userData._id,
-                        usename: userData.username,
+                        username: userData.username,
                         email: userData.email,
                         token: authToken
                     });
@@ -125,7 +126,7 @@ const handleLogin = async (req, res) => {
 
     } catch (error) {
         // console.log({ error: error });
-        res.status(500).json(error);
+        res.status(500).json({ error });
     }
 }
 
@@ -145,7 +146,7 @@ const handleSignup = async (req, res) => {
                     password: hashedPassword
                 });
                 const user = await newUser.save();
-                sendVerificationEmail(user, res);
+                sendVerificationEmail(user, req, res);
             }
             else {
                 res.status(400).json({ error: { message: "Passwords aren't matching" } });
@@ -153,16 +154,18 @@ const handleSignup = async (req, res) => {
         }
         else {
             if (!existingUser.verified) {
-                sendVerificationEmail(existingUser, res);
+                sendVerificationEmail(existingUser, req, res);
             }
-            res.status(409).json({ error: { message: "User already registerd." } })
+            else {
+                res.status(409).json({ error: { message: "A user with this email is already registerd." } })
+            }
         }
 
 
 
     } catch (error) {
-        // console.log(error);
-        res.status(500).json({ error: error });
+        console.log(error);
+        res.status(500).json({ error });
     }
 }
 
@@ -203,17 +206,22 @@ const handleVerifyEmail = (req, res) => {
                                 User.updateOne({ _id: userId }, { verified: true })
                                     .then(() => {
                                         UserVerification.deleteOne({ userId })
-                                            .then(() => {
+                                            .then(async () => {
+                                                const defaultCollection = new Collection({
+                                                    userId: userId,
+                                                    collection_name: 'default'
+                                                });
+                                                await defaultCollection.save();
                                                 res.sendFile(path.join(__dirname, "../views/verified.html"))
                                             })
                                             .catch(error => {
-                                                console.log(error);
+                                                // console.log(error);
                                                 let message = "An error occured while finalizing successful verification"
                                                 res.redirect(`/api/auth/verified/error=true&message=${message}`);
                                             })
                                     })
                                     .catch(error => {
-                                        console.log(error);
+                                        // console.log(error);
                                         let message = "An error occured while updating user record to show verified."
                                         res.redirect(`/api/auth/verified/error=true&message=${message}`);
                                     })
@@ -237,7 +245,7 @@ const handleVerifyEmail = (req, res) => {
             }
         })
         .catch((error) => {
-            console.log(error);
+            // console.log(error);
             let message = "An error occured while checking the current user verification record";
             res.redirect(`/api/auth/verified/error=true&message=${message}`);
         })
@@ -247,28 +255,33 @@ const handleVerifyEmail = (req, res) => {
 const handleDeleteUserAccount = async (req, res) => {
     const { password } = req.body;
     const { userId, email } = req.user;
-    const userAccount = await User.findOne({ email });
-    if (userAccount) {
-        const isMatch = await bcrypt.compare(password, userAccount.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid Password" });
+    try {
+        const userAccount = await User.findOne({ email });
+        if (userAccount) {
+            const isMatch = await bcrypt.compare(password, userAccount.password);
+            if (!isMatch) {
+                return res.status(400).json({ error: { message: "Invalid Password" } });
+            }
+            await User.deleteOne({ email });
+            await Collection.deleteMany({ userId: userId });
+            await Task.deleteMany({ user: userId });
+            res.status(200).json({ error: { message: "Account Deleted Successfully!" } });
         }
-        await User.deleteOne({ email });
-        await Collection.deleteMany({ userId: userId });
-        await Task.deleteMany({ user: userId });
-        res.status(200).json({ message: "Account Deleted Successfully!" });
+    } catch (error) {
+        res.status(500).json({ error });
     }
+
 }
 
 const handleLogout = async (req, res) => {
     res.cookie('refreshToken', '', {
-        path: '/', 
-        httpOnly: true, 
-        maxAge: 1000, 
+        path: '/',
+        httpOnly: true,
+        maxAge: 1000,
         secure: true,
-        sameSite: 'None'  
+        sameSite: 'None'
     });
-    res.status(200).json({message: 'logged out successfull'});
+    res.status(200).json({ message: 'logged out successfull' });
 }
 
 module.exports = {

@@ -4,6 +4,9 @@ const UserVerificationSchema = new mongoose.Schema({
     userId: {
         type: String
     },
+    email: {
+        type: String
+    },
     uniqueString:{
         type: String
     },

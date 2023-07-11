@@ -25,13 +25,13 @@ const sendPasswordResetMail = async ({ _id, username, email }, code, passwordRes
         sendEmail(email, subject, mailBody);
         res.json({
             status: "PENDING",
-            message: "A security code is send to your email. Please check your email.",
+            message: "A security code is sent to your email. Please check your email.",
             token: passwordResetToken
         });
 
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: error });
+        // console.log(error);
+        res.status(500).json({ error });
     }
 }
 
@@ -39,11 +39,11 @@ const handleRequestResetPassword = async (req, res) => {
     try {
         const userData = await User.findOne({ email: req.body.email });
         if (!userData) {
-            res.status(404).json({ message: "User not found. If you don't have an account create one first." });
+            res.status(404).json({ error: { message: "User not found. If you don't have an account create one first." } });
         }
         else {
             if (userData.verified != true) {
-                res.status(401).json({ message: "Account hasn't been verified. Log in using a valid email." });
+                res.status(401).json({ error: { message: "Account hasn't been verified. Log in using a valid email." } });
             }
             else {
                 // Generate an OTP of 4 digit
@@ -75,8 +75,8 @@ const handleRequestResetPassword = async (req, res) => {
             }
         }
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: error });
+        // console.log(error);
+        res.status(500).json({ error });
     }
 }
 
@@ -99,15 +99,17 @@ const handleVerifyResetPassword = async (req, res) => {
             if ((passwordResetData.expiresAt < Date.now())) {
                 // expired
                 await PasswordReset.deleteOne({ email });
-                res.status(410).json({ verified: false, status: 'EXPIRED', message: "The code is expired." });
+                res.status(410).json({ error: { verified: false, status: 'EXPIRED', message: "The code is expired." } });
             }
             else {
                 const verifyCode = await bcrypt.compare(resetCode, passwordResetData.resetCode);
                 if (!verifyCode) {
                     res.status(400).json({
-                        verified: false,
-                        status: 'INVALID',
-                        message: "Invalid code! Please check your email and enter the valid code."
+                        error: {
+                            verified: false,
+                            status: 'INVALID',
+                            message: "Invalid code! Please check your email and enter the valid code."
+                        }
                     });
                 }
                 else {
@@ -128,7 +130,7 @@ const handleVerifyResetPassword = async (req, res) => {
         }
     } catch (error) {
         // console.log(error);
-        res.status(500).json({ error: error });
+        res.status(500).json({ error: { status: "FAILED", message: "Passwords aren't matching" } });
     }
 }
 
@@ -157,12 +159,12 @@ const handleUpdatePassword = async (req, res) => {
             return res.status(200).json({ status: "SUCCESS", message: "Password changed successfully!" });
         }
         else {
-            return res.status(400).json({ status: "FAILED", message: "Passwords aren't matching" });
+            return res.status(400).json({ error: { status: "FAILED", message: "Passwords aren't matching" } });
         }
 
     } catch (error) {
         // console.log(error);
-        return res.status(404).json({ error: error, status: "FAILED", message: "Not found" });
+        return res.status(404).json({ error: { error, status: "FAILED", message: "Something went wrong!" } });
     }
 }
 

@@ -8,8 +8,8 @@ const handleAddNewTask = async (req, res) => {
         const saveData = await data.save();
         res.status(200).json(data);
     } catch (error) {
-        res.status(500).json({ error: error });
-        console.log(error);
+        // console.log(error);
+        res.status(500).json({ error });
     }
 }
 
@@ -27,15 +27,15 @@ const handleUpdateTask = async (req, res) => {
                 );
                 res.status(200).json(updatedTask);
             } catch (error) {
-                res.status(500).json({ error: error });
+                res.status(500).json({ error });
             }
         } else {
-            res.status(401).json("You can update only your task");
+            res.status(401).json({ error: { message: "You can update only your task" } });
         }
 
     } catch (error) {
-        res.status(404).json({ error: "Not found" });
-        console.log(error);
+        // console.log(error);
+        res.status(404).json({ error: { message: "Not found" } });
     }
 }
 
@@ -46,49 +46,49 @@ const handleDeleteTask = async (req, res) => {
             await task.delete();
             res.status(200).json("Task deleted");
         } else {
-            res.status(401).json("You can delete only your task");
+            res.status(401).json({ error: { message: "You can delete only your task" } });
         }
 
     } catch (error) {
-        res.status(404).json({ error: "Not found" });
+        res.status(404).json({ error: { message: "Not found" } });
     }
 }
 
 const handleGetAllTask = async (req, res) => {
     try {
-        const {collection_name, task} = req.query;
+        const { collection_name, task } = req.query;
         const queryObject = {};
-        if(collection_name){
-            queryObject.collection_name = { $regex: collection_name, $options: 'i'};
+        if (collection_name) {
+            queryObject.collection_name = { $regex: collection_name, $options: 'i' };
         }
-        if(task){
-            queryObject.task = { $regex: task, $options: 'i'};
+        if (task) {
+            queryObject.task = { $regex: task, $options: 'i' };
         }
-        const data = await Task.find({ user: req.user.userId , ...queryObject });
+        const data = await Task.find({ user: req.user.userId, ...queryObject });
         // console.log(Object.keys(req.query).length)
         res.status(200).json(data);
 
     } catch (error) {
         console.log(error)
-        res.status(500).json({ error: error });
+        res.status(500).json({ error });
     }
 }
 
 const handleGetSingleTask = async (req, res) => {
     try {
         console.log(req.params.id);
-        
+
         const task = await Task.findById({ _id: req.params.id });
         if (req.user.userId === task.user) {
             res.status(200).json(task);
         }
         else {
-            res.status(404).json({ error: "Not Found" });
+            res.status(404).json({ error: { message: "Not Found" } });
 
         }
 
     } catch (error) {
-        res.status(500).json({ error: error });
+        res.status(500).json({ error });
     }
 }
 

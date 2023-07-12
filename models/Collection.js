@@ -8,14 +8,6 @@ const CollectionSchema = new mongoose.Schema({
         type: String,
         default: "default"
     },
-    total_tasks: {
-        type: Number,
-        default: 0
-    },
-    total_finished: {
-        type: Number,
-        default: 0
-    },
 }, {timestamps: true});
 
 const Collection = new mongoose.model('Collections', CollectionSchema);

@@ -8,9 +8,6 @@ const TaskSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    collection_name: {
-        type: String,
-    },
     task: {
         type: String,
         required: true

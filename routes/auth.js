@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 router.use(cookieParser());
 
 
-const { handleLogin, handleSignup, handleVerifyEmail, handleDeleteUserAccount, handleLogout } = require('../controllers/authController');
+const { handleLogin, handleSignup, handleVerifyEmail, handleLogout } = require('../controllers/authController');
 const { handleRequestResetPassword, handleVerifyResetPassword, handleUpdatePassword } = require('../controllers/resetPasswordController');
 
 // Signup user
@@ -24,16 +24,6 @@ router.post('/login', handleLogin);
 // Verify user email
 router.get('/verify/:userId/:uniqueString', handleVerifyEmail, );
 
-// Get authenticated user
-router.get('/user', fetchuser, async (req, res) => {
-    try {
-        const { userId, ...rest } = req.user;
-        res.status(200).json(rest);
-    } catch (error) {
-        res.status(500).json({ error });
-    }
-})
-
 // Request for password reset
 router.post('/requestResetPassword', handleRequestResetPassword);
 
@@ -42,9 +32,6 @@ router.post('/verifyResetPassword', handleVerifyResetPassword);
 
 // Reset or Update password
 router.patch('/updatePassword', handleUpdatePassword);
-
-// Delete authenticated user account
-router.delete('/deleteUserAccount', fetchuser, handleDeleteUserAccount);
 
 // Logout user
 router.post('/logout', handleLogout);

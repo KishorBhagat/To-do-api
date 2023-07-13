@@ -2,6 +2,7 @@ const express = require('express');
 const connectDB = require('./config/db');
 const app = express();
 const authRoute = require('./routes/auth');
+const usersRoute = require('./routes/users');
 const collectionRoute = require('./routes/collections');
 const tasksRoute = require('./routes/tasks');
 const refreshToken = require('./routes/refreshToken');
@@ -23,6 +24,7 @@ app.use(cors({
 
 
 app.use('/api/auth', authRoute);
+app.use('/api/users', usersRoute);
 app.use('/api/collections', collectionRoute);
 app.use('/api/tasks', tasksRoute);
 app.use('/api/refreshToken', refreshToken);

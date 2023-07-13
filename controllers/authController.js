@@ -252,26 +252,7 @@ const handleVerifyEmail = (req, res) => {
 }
 
 
-const handleDeleteUserAccount = async (req, res) => {
-    const { password } = req.body;
-    const { userId, email } = req.user;
-    try {
-        const userAccount = await User.findOne({ email });
-        if (userAccount) {
-            const isMatch = await bcrypt.compare(password, userAccount.password);
-            if (!isMatch) {
-                return res.status(400).json({ error: { message: "Invalid Password" } });
-            }
-            await User.deleteOne({ email });
-            await Collection.deleteMany({ userId: userId });
-            await Task.deleteMany({ user: userId });
-            res.status(200).json({ error: { message: "Account Deleted Successfully!" } });
-        }
-    } catch (error) {
-        res.status(500).json({ error });
-    }
 
-}
 
 const handleLogout = async (req, res) => {
     res.cookie('refreshToken', '', {
@@ -288,6 +269,5 @@ module.exports = {
     handleLogin,
     handleSignup,
     handleVerifyEmail,
-    handleDeleteUserAccount,
     handleLogout
 };

@@ -24,7 +24,7 @@ app.use(cors({
 
 
 app.use('/api/auth', authRoute);
-app.use('/api/users', usersRoute);
+app.use('/api/user', usersRoute);
 app.use('/api/collections', collectionRoute);
 app.use('/api/tasks', tasksRoute);
 app.use('/api/refreshToken', refreshToken);

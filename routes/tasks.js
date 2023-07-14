@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fetchuser = require('../middleware/fetchuser');
+const fetchuser = require('../middlewares/fetchuser');
 const { handleAddNewTask, handleUpdateTask, handleDeleteTask, handleGetAllTask, handleGetSingleTask } = require('../controllers/tasksController')
 
 // add task for the authenticated user

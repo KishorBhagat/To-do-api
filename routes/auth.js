@@ -3,7 +3,7 @@ const router = express.Router();
 // const dotenv = require('dotenv');
 const { v4: uuidv4 } = require('uuid');
 
-const fetchuser = require('../middleware/fetchuser');
+const fetchuser = require('../middlewares/fetchuser');
 
 // dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET;

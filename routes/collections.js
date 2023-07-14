@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fetchuser = require('../middleware/fetchuser');
+const fetchuser = require('../middlewares/fetchuser');
 const { handleAddNewCollection, handleUpdateCollection, handleDeleteCollection, handleGetAllCollections, handleGetSingleCollection } = require('../controllers/collectionsController');
 
 

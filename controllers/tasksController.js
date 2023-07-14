@@ -1,5 +1,5 @@
 const Task = require('../models/Task');
-const fetchuser = require('../middleware/fetchuser');
+const fetchuser = require('../middlewares/fetchuser');
 
 const handleAddNewTask = async (req, res) => {
     try {

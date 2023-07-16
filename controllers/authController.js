@@ -207,11 +207,14 @@ const handleVerifyEmail = (req, res) => {
                                     .then(() => {
                                         UserVerification.deleteOne({ userId })
                                             .then(async () => {
-                                                const defaultCollection = new Collection({
-                                                    userId: userId,
-                                                    collection_name: 'default'
-                                                });
-                                                await defaultCollection.save();
+                                                const initialCollections = [
+                                                    {userId, collection_name: 'default'},
+                                                    {userId, collection_name: 'personal'},
+                                                    {userId, collection_name: 'school'},
+                                                    {userId, collection_name: 'shopping'},
+                                                    {userId, collection_name: 'wishlist'},
+                                                ]
+                                                await Collection.insertMany(initialCollections)
                                                 res.sendFile(path.join(__dirname, "../views/verified.html"))
                                             })
                                             .catch(error => {

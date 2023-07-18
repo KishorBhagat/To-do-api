@@ -13,9 +13,10 @@ router.get('/', fetchuser, handleGetUser);
 // Update authenticated user's account
 router.patch('/', fetchuser, handleUpdateUser);
 
-// Change authenticated user's password
+// Change authenticated user's email
 router.post('/changeemail', fetchuser, handleChangeEmail);
 
+// Verify change email
 router.get('/verifyemail/:userId/:newemail/:uniqueString', handleVerifyEmail);
 
 // Change authenticated user's password

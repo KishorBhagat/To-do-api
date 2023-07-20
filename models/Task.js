@@ -12,6 +12,10 @@ const TaskSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    dueDate: {
+        type: Date,
+        default: null
+    },
     active: {
         type: Boolean,
         default: true

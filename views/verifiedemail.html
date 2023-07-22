@@ -82,10 +82,9 @@
             </svg></div>
         <h3>Verified!</h3>
         <div class="para">
-            <p>You have successfully verified your account.</p>
-            <p>You can now log in.</p>
+            <p>You have successfully verified and updated your email.</p>
         </div>
-        <a id="loginLink" target="_blank">Go to Log in page.</a>
+        <a id="loginLink" target="_blank">Go back to the app.</a>
     </div>
 
     <script>
@@ -96,7 +95,7 @@
         const searchParams = Object.fromEntries(urlSearchParams.entries());
 
         if (searchParams.hasOwnProperty('login')) {
-            loginLink.setAttribute('href', searchParams['login'] + '/login');
+            loginLink.setAttribute('href', searchParams['client']);
         }
     </script>
 </body>

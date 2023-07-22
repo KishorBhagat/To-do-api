@@ -6,6 +6,7 @@ const UserVerification = require('../models/UserVerification');
 const cloudinary = require('../config/cloudinaryConfig');
 const { v4: uuidv4 } = require('uuid');
 const { sendEmail } = require('../utils/sendEmail');
+const path = require('path');
 
 
 const sendVerificationEmail = async ({ _id, newemail }, req, res) => {
@@ -115,8 +116,8 @@ const handleVerifyEmail = async (req, res) => {
         }
         await User.updateOne({ _id: userId }, { email: newemail });
         await UserVerification.deleteOne({userId});
-        res.status(200).json({message: "Email changed successfully!"})
-        // res.redirect(req.headers.origin);
+        // res.status(200).json({message: "Email changed successfully!"});
+        res.sendFile(path.join(__dirname, "../views/verifiedemail.html"))
     } catch (error) {
         console.log(error)
         res.status(500).json({error: {message: 'Internal server error!'}})

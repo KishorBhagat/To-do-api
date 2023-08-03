@@ -16,15 +16,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 
 const sendVerificationEmail = async (user, req, res) => {
-    const { _id, email } = user;
+    const { _id, email, username } = user;
     const origin = req.headers.origin;
     const currentUrl = process.env.HOST_URL;
     const uniqueString = uuidv4() + _id;
     const subject = "Verify your email";
-    const mailBody = `<p>Verify your email address to complete the sign up and login into your account.</p>
-                      <p>Click the below link to proceed.</p>
-                      <p>(The link will <b>expire in 10 minutes.)</b>
-                      <p>${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString + '/?login=' + origin}</p>`;
+    const mailBody = `<body style="background-color: #f0efef;">
+                        <div style=" border-radius: 2px; padding: 20px;">
+                            <h1>Verify This Email Address</h1>
+                            <p>Hi ${username.split(' ')[0]},</p>
+                            <p>Welcome to Task App!</p>
+                            <p>Please click the button below to verify your email address.<br>(It will <b>expire in 10 minutes.)</b></p>
+                            <p>Thanks,<br>Kishor Bhagat</p><br>
+                            <a href="${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString + '/?login=' + origin}" style="text-align: center; display: block;" target="_blank"><button style="background-color: #129dff; color: #fff; border: none; padding: 10px 20px; border-radius: 2px; font-size: 12px; cursor: pointer;">Verify Email</button></a>
+                        </div>
+                      </body>`;
     // </p><p>Click <a href=${currentUrl + "api/auth/verify/" + _id + "/" + uniqueString}>here </a> to proceed.</p>
     const saltRounds = 10;
     try {
@@ -208,11 +214,11 @@ const handleVerifyEmail = (req, res) => {
                                         UserVerification.deleteOne({ userId })
                                             .then(async () => {
                                                 const initialCollections = [
-                                                    {userId, collection_name: 'default'},
-                                                    {userId, collection_name: 'personal'},
-                                                    {userId, collection_name: 'school'},
-                                                    {userId, collection_name: 'shopping'},
-                                                    {userId, collection_name: 'wishlist'},
+                                                    { userId, collection_name: 'default' },
+                                                    { userId, collection_name: 'personal' },
+                                                    { userId, collection_name: 'school' },
+                                                    { userId, collection_name: 'shopping' },
+                                                    { userId, collection_name: 'wishlist' },
                                                 ]
                                                 await Collection.insertMany(initialCollections)
                                                 res.sendFile(path.join(__dirname, "../views/verified.html"))

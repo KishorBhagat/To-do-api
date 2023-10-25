@@ -175,91 +175,54 @@ const handleSignup = async (req, res) => {
     }
 }
 
-const handleVerifyEmail = (req, res) => {
+const handleVerifyEmail = async (req, res) => {
     let { userId, uniqueString } = req.params;
-
-    UserVerification.find({ userId })
-        .then((result) => {
-            if (result.length > 0) {
-                // user verification record exists so we proceed
-                const { expiresAt } = result[0];
-                const hashedUniqueString = result[0].uniqueString;
-                if (expiresAt < new Date()) {
-                    // record has expired so we delete it
-                    UserVerification.deleteOne({ userId })
-                        .then(result => {
-                            User.deleteOne({ _id: userId })
-                                .then(() => {
-                                    let message = "Link has expired. Please sign up again.";
-                                    res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                                })
-                                .catch((error) => {
-                                    let message = "Clearing user with experied unique string failed";
-                                    res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                                })
-                        })
-                        .catch((error) => {
-                            let message = "An error occured while clearing expired user verification record";
-                            res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                        })
-                }
-                else {
-                    // valid record exists so we validate the user string
-                    bcrypt.compare(uniqueString, hashedUniqueString)
-                        .then(result => {
-                            if (result) {
-                                // string matches
-                                User.updateOne({ _id: userId }, { verified: true })
-                                    .then(() => {
-                                        UserVerification.deleteOne({ userId })
-                                            .then(async () => {
-                                                const initialCollections = [
-                                                    { userId, collection_name: 'default' },
-                                                    { userId, collection_name: 'personal' },
-                                                    { userId, collection_name: 'school' },
-                                                    { userId, collection_name: 'shopping' },
-                                                    { userId, collection_name: 'wishlist' },
-                                                ]
-                                                await Collection.insertMany(initialCollections)
-                                                res.sendFile(path.join(__dirname, "../views/verified.html"))
-                                            })
-                                            .catch(error => {
-                                                // console.log(error);
-                                                let message = "An error occured while finalizing successful verification"
-                                                res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                                            })
-                                    })
-                                    .catch(error => {
-                                        // console.log(error);
-                                        let message = "An error occured while updating user record to show verified."
-                                        res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                                    })
-                            }
-                            else {
-                                // existing record but incorrect verification details passed.
-                                let message = "Invalid verification details passed. Check your inbox."
-                                res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                            }
-                        })
-                        .catch(error => {
-                            let message = "An error occured while comparing unique strings"
-                            res.redirect(`/api/auth/verified/error=true&message=${message}`);
-                        })
-                }
-            }
-            else {
-                // user verification record doesn't exist
-                let message = "Account record doesn't exist or has been verified already. Please sign up or login.";
-                res.redirect(`/api/auth/verified/error=true&message=${message}`);
-            }
-        })
-        .catch((error) => {
-            // console.log(error);
+    try {
+        const user = await UserVerification.find({ userId });
+        // Check if user is not null
+        if (!user) {
+            // User verification record doesnot exist
             let message = "An error occured while checking the current user verification record";
-            res.redirect(`/api/auth/verified/error=true&message=${message}`);
-        })
+            return res.redirect(`/api/auth/verified/?error=true&message=${message}`);
+        }
+        if (!(user.length > 0)) {
+            // User verification record does not exists
+            let message = "Account record doesn't exist or has been verified already. Please sign up or login.";
+            return res.redirect(`/api/auth/verified/?error=true&message=${message}`);
+        }
+        // user verification record exists so we proceed
+        const { expiresAt } = user[0];
+        const hashedUniqueString = user[0].uniqueString;
+        if (expiresAt < new Date()) {
+            // record has expired so we delete it
+            await UserVerification.deleteOne({ userId });
+            await User.deleteOne({ _id: userId });
+            let message = "Link has expired. Please sign up again.";
+            return res.redirect(`/api/auth/verified/?error=true&message=${message}`);
+        }
+        // valid record exists so we validate the user string
+        const isMatch = await bcrypt.compare(uniqueString, hashedUniqueString);
+        if(!isMatch) {
+            let message = "Invalid verification details passed. Check your inbox."
+            return res.redirect(`/api/auth/verified/error=true&message=${message}`);
+        }
+        // unique string matches so we update the verified field to true in user collection and delete the record in userVerification collection
+        await User.updateOne({_id: userId}, {verified: true});
+        await UserVerification.deleteOne({ userId });
+        const initialCollections = [
+            { userId, collection_name: 'default' },
+            { userId, collection_name: 'personal' },
+            { userId, collection_name: 'school' },
+            { userId, collection_name: 'shopping' },
+            { userId, collection_name: 'wishlist' },
+        ]
+        await Collection.insertMany(initialCollections)
+        res.sendFile(path.join(__dirname, "../views/verified.html"));
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: { status: "FAILED", message: error.message } });
+    }
 }
-
 
 
 
